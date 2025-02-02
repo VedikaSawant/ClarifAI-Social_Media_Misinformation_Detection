@@ -1,1 +1,2 @@
 ML_model/c1_fakenews_weights.pt filter=lfs diff=lfs merge=lfs -text
+app/c1_fakenews_weights.pt filter=lfs diff=lfs merge=lfs -text
