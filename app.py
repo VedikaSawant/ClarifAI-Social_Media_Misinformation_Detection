@@ -20,7 +20,7 @@ load_dotenv()
 # MongoDB setup
 MONGO_URI = os.getenv("MONGO_URI")
 client = pymongo.MongoClient(MONGO_URI)
-db = client.get_database()
+db = client.get_database('users')
 users_collection = db.get_collection("user_data")
 
 # Function to hash the password
