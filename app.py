@@ -20,7 +20,7 @@ load_dotenv()
 # MongoDB setup
 MONGO_URI = st.secrets["MONGO_URI"]  # Access MongoDB URI from Streamlit secrets
 client = pymongo.MongoClient(MONGO_URI)
-db = client.get_database('users')
+db = client.get_database()
 users_collection = db.get_collection("user_data")
 
 # Function to hash the password
