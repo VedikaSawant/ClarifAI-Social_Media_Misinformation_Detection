@@ -18,7 +18,7 @@ if 'authenticated' not in st.session_state:
 load_dotenv()
 
 # MongoDB setup
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = st.secrets["MONGO_URI"]  # Access MongoDB URI from Streamlit secrets
 client = pymongo.MongoClient(MONGO_URI)
 db = client.get_database('users')
 users_collection = db.get_collection("user_data")
@@ -87,7 +87,7 @@ def signup():
                 st.error("Please fill in all fields.")
 
 # Retrieve the API Key from environment variable
-API_KEY = os.getenv("API_KEY")  # This retrieves the API key from the environment variable
+API_KEY = st.secrets["API_KEY"]
 
 if API_KEY is None:
     st.error("❌ API Key not set!")
