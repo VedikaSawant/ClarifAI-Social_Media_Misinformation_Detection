@@ -204,6 +204,7 @@ def main():
     st.sidebar.title("📂 Navigation")
     st.sidebar.markdown("---")
 
+    pages = {}
     if st.session_state['authenticated']:
         st.sidebar.markdown("**Welcome:** " + st.session_state['user'])
         st.sidebar.markdown("### Pages")
@@ -211,16 +212,19 @@ def main():
     else:
         st.sidebar.markdown("### Auth")
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
+        pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
+
+    selected_    page = st.session_state.get('page', list(pages.values())[0])
 
     selected_page = st.session_state.get('page', list(pages.values())[0])
 
-for label, target in pages.items():
-    if st.sidebar.button(label):
-        selected_page = target
+    for label, target in pages.items():
+        if st.sidebar.button(label):
+            selected_page = target
 
-if selected_page != st.session_state.get('page'):
-    st.session_state['page'] = selected_page
-    st.experimental_rerun()
+    if selected_page != st.session_state.get('page'):
+        st.session_state['page'] = selected_page
+        st.experimental_rerun()
 
     page = st.session_state.get('page', list(pages.values())[0])
 
