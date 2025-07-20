@@ -225,7 +225,7 @@ def factcheck_input():
     """, unsafe_allow_html=True)
 
     with st.form("factcheck_form"):
-        text_input = st.text_area("Enter a news headline or statement")
+        text_input = st.text_area("Enter a news headline or statement", placeholder="e.g. The Earth is flat")
         submitted = st.form_submit_button("Check Fact")
 
         if submitted:
