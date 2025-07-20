@@ -13,9 +13,10 @@ from streamlit_cookies_manager import CookieManager # ✅ 1. IMPORT THE COOKIE M
 # --- Page Config (must be the first Streamlit command) ---
 st.set_page_config(page_title="FactCheck App", layout="wide")
 
-# ✅ 2. INITIALIZE COOKIE MANAGER AND LOAD COOKIES
+# ✅ 2. INITIALIZE COOKIE MANAGER
 # This should be at the top, after page_config
 cookies = CookieManager()
+# cookies.load() # REMOVED: This line caused the AttributeError. Cookies are loaded automatically.
 
 # --- Initialize session state from cookie ---
 # Do this ONCE, at the very top of the script.
@@ -67,9 +68,10 @@ def login():
                     st.session_state.username = user.get('username', email)
                     st.session_state.page = "FactCheck"
 
-                    # ✅ 3. SET COOKIES ON LOGIN
-                    cookies.set('username', st.session_state.username)
-                    cookies.set('user_email', st.session_state.user)
+                    # ✅ 3. SET COOKIES ON LOGIN (corrected method)
+                    cookies['username'] = st.session_state.username
+                    cookies['user_email'] = st.session_state.user
+                    cookies.save() # Persist the changes
 
                     st.success("Successfully logged in!")
                     st.rerun()
@@ -103,9 +105,10 @@ def signup():
                     st.session_state.username = username
                     st.session_state.page = "FactCheck"
 
-                    # ✅ 4. SET COOKIES ON SIGNUP
-                    cookies.set('username', st.session_state.username)
-                    cookies.set('user_email', st.session_state.user)
+                    # ✅ 4. SET COOKIES ON SIGNUP (corrected method)
+                    cookies['username'] = st.session_state.username
+                    cookies['user_email'] = st.session_state.user
+                    cookies.save() # Persist the changes
 
                     st.success("Account created! Logging in...")
                     st.rerun()
@@ -296,9 +299,10 @@ def main():
             st.rerun()
         st.sidebar.markdown("---")
         if st.sidebar.button("Logout", use_container_width=True):
-            # ✅ 5. DELETE COOKIES ON LOGOUT
-            cookies.delete('username')
-            cookies.delete('user_email')
+            # ✅ 5. DELETE COOKIES ON LOGOUT (corrected method)
+            del cookies['username']
+            del cookies['user_email']
+            cookies.save() # Persist the changes
             
             # Clear session state
             st.session_state.authenticated = False
