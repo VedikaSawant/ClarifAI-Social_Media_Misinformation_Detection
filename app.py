@@ -15,20 +15,31 @@ st.set_page_config(page_title="FactCheck App", layout="wide")
 
 # Initialize Cookie Manager
 cookies = CookieManager()
-# cookies.load() # REMOVED: This line caused the AttributeError. Cookies are loaded automatically.
+
+# --- IMPORTANT: Wait for cookies to be ready before proceeding with authentication logic ---
+if not cookies.ready():
+    st.warning("Loading cookies...")
+    st.stop() # Stops the script execution until the cookies are ready
+              # Streamlit will automatically rerun once the component is ready.
 
 # --- Initialize session state from cookie ---
+# Do this ONCE, at the very top of the script.
 if 'authenticated' not in st.session_state:
-    if cookies.ready() and cookies.get('username'):
+    # Now, cookies are guaranteed to be ready here
+    if cookies.get('username'):
+        # If cookie exists, set session state from cookie
         st.session_state['authenticated'] = True
         st.session_state['username'] = cookies.get('username')
         st.session_state['user'] = cookies.get('user_email')
         st.session_state['page'] = 'FactCheck'
     else:
+        # If no cookie, initialize session state as new
         st.session_state['authenticated'] = False
         st.session_state['page'] = 'Login'
         st.session_state['username'] = ''
         st.session_state['user'] = ''
+
+# ... (the rest of your app.py code remains the same from the previous correction) ...
 
 # --- Load env and MongoDB connection ---
 load_dotenv()
@@ -111,10 +122,9 @@ def signup():
 # --- FactCheck API Setup ---
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 
-# --- Verdict classification (UPDATED) ---
+# --- Verdict classification ---
 def classify_verdict(verdict_text):
     verdict_text = verdict_text.lower()
-    # Added "inaccurate" and "not true" to the False category
     if any(x in verdict_text for x in ["false", "misleading", "incorrect", "untrue", "fake", "inaccurate", "not true"]):
         return "❌ False"
     elif any(x in verdict_text for x in ["true", "accurate", "correct", "mostly true"]):
@@ -130,10 +140,8 @@ def assign_severity(claim):
         9: ["explosion", "hazard", "attack", "war"],
         8: ["climate change", "pollution", "disaster"],
         7: ["election", "fraud", "corruption", "government"],
-        6: ["technology", "robot", "science", "AI", "radar"], # Added radar for radar-related claims
+        6: ["technology", "robot", "science", "AI", "radar"],
         5: ["celebrity", "sports", "entertainment"],
-        # Consider adding "flat earth" to a higher severity category if needed
-        # e.g., 6: ["technology", "robot", "science", "AI", "radar", "flat earth"],
     }
     for score, words in keywords.items():
         if any(word in claim for word in words):
@@ -236,7 +244,7 @@ def factcheck_input():
             total_claims = len(results)
             false_percentage = (false_count / total_claims) * 100 if total_claims > 0 else 0
 
-            # OVERALL VERDICT (UPDATED LOGIC)
+            # OVERALL VERDICT
             st.subheader("Overall Verdict")
             if credibility_score < 5:
                 st.info(f"❓ Overall Verdict: Verification is **LIMITED ({credibility_score} sources)**. The overall accuracy is unclear. Exercise caution and seek more information.")
