@@ -6,3 +6,4 @@ bcrypt
 wordcloud
 pillow
 textblob
+streamlit-cookies-manager
