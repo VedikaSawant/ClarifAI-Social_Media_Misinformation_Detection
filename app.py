@@ -212,7 +212,7 @@ def main():
         st.sidebar.markdown("### Auth")
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
 
-    page_label = st.sidebar.radio("Select Page", list(pages.keys()))
+    page_label = st.sidebar.selectbox("Select Page", list(pages.keys()), format_func=lambda x: x)
     page = pages[page_label]
 
     if page == "Login": login()
