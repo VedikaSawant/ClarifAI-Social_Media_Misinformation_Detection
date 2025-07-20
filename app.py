@@ -214,8 +214,7 @@ def main():
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
 
-    selected_    page = st.session_state.get('page', list(pages.values())[0])
-
+    
     selected_page = st.session_state.get('page', list(pages.values())[0])
 
     for label, target in pages.items():
