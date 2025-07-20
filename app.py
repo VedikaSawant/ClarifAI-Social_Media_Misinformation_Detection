@@ -8,28 +8,23 @@ from wordcloud import WordCloud
 import io
 from PIL import Image
 from textblob import TextBlob
-from streamlit_cookies_manager import CookieManager # ✅ 1. IMPORT THE COOKIE MANAGER
+from streamlit_cookies_manager import CookieManager
 
 # --- Page Config (must be the first Streamlit command) ---
 st.set_page_config(page_title="FactCheck App", layout="wide")
 
-# ✅ 2. INITIALIZE COOKIE MANAGER
-# This should be at the top, after page_config
+# Initialize Cookie Manager
 cookies = CookieManager()
 # cookies.load() # REMOVED: This line caused the AttributeError. Cookies are loaded automatically.
 
 # --- Initialize session state from cookie ---
-# Do this ONCE, at the very top of the script.
 if 'authenticated' not in st.session_state:
-    # Check if the cookie exists ONLY IF cookies are ready
-    if cookies.ready() and cookies.get('username'): # ✅ Check cookies.ready()
-        # If cookie exists, set session state from cookie
+    if cookies.ready() and cookies.get('username'):
         st.session_state['authenticated'] = True
         st.session_state['username'] = cookies.get('username')
         st.session_state['user'] = cookies.get('user_email')
         st.session_state['page'] = 'FactCheck'
     else:
-        # If no cookie, initialize session state as new
         st.session_state['authenticated'] = False
         st.session_state['page'] = 'Login'
         st.session_state['username'] = ''
@@ -62,16 +57,15 @@ def login():
             if email and password:
                 user = users_collection.find_one({"email": email})
                 if user and verify_password(user["password"], password):
-                    # Set session state
                     st.session_state.authenticated = True
                     st.session_state.user = email
                     st.session_state.username = user.get('username', email)
                     st.session_state.page = "FactCheck"
 
-                    # ✅ 3. SET COOKIES ON LOGIN (corrected method)
+                    # Set cookies
                     cookies['username'] = st.session_state.username
                     cookies['user_email'] = st.session_state.user
-                    cookies.save() # Persist the changes
+                    cookies.save()
 
                     st.success("Successfully logged in!")
                     st.rerun()
@@ -99,30 +93,29 @@ def signup():
                         "password": hash_password(password),
                         "feedback": []
                     })
-                    # Set session state
                     st.session_state.authenticated = True
                     st.session_state.user = email
                     st.session_state.username = username
                     st.session_state.page = "FactCheck"
 
-                    # ✅ 4. SET COOKIES ON SIGNUP (corrected method)
+                    # Set cookies
                     cookies['username'] = st.session_state.username
                     cookies['user_email'] = st.session_state.user
-                    cookies.save() # Persist the changes
+                    cookies.save()
 
                     st.success("Account created! Logging in...")
                     st.rerun()
             else:
                 st.error("Please fill in all fields.")
 
-# --- (The rest of your functions: check_fake_news, visualizations, etc. remain unchanged) ---
 # --- FactCheck API Setup ---
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 
-# --- Verdict classification ---
+# --- Verdict classification (UPDATED) ---
 def classify_verdict(verdict_text):
     verdict_text = verdict_text.lower()
-    if any(x in verdict_text for x in ["false", "misleading", "incorrect", "untrue", "fake"]):
+    # Added "inaccurate" and "not true" to the False category
+    if any(x in verdict_text for x in ["false", "misleading", "incorrect", "untrue", "fake", "inaccurate", "not true"]):
         return "❌ False"
     elif any(x in verdict_text for x in ["true", "accurate", "correct", "mostly true"]):
         return "✅ True"
@@ -137,8 +130,10 @@ def assign_severity(claim):
         9: ["explosion", "hazard", "attack", "war"],
         8: ["climate change", "pollution", "disaster"],
         7: ["election", "fraud", "corruption", "government"],
-        6: ["technology", "robot", "science", "AI"],
+        6: ["technology", "robot", "science", "AI", "radar"], # Added radar for radar-related claims
         5: ["celebrity", "sports", "entertainment"],
+        # Consider adding "flat earth" to a higher severity category if needed
+        # e.g., 6: ["technology", "robot", "science", "AI", "radar", "flat earth"],
     }
     for score, words in keywords.items():
         if any(word in claim for word in words):
@@ -236,16 +231,21 @@ def factcheck_input():
                 st.markdown(f"**Found {credibility_score} fact-check reviews.**")
                 st.info("Reliable" if credibility_score >= 5 else "Partially Reliable")
 
-            # OVERALL VERDICT
+            # Calculate false percentage for refined Overall Verdict
+            false_count = sum(1 for r in results if r['verdict_label'] == "❌ False")
+            total_claims = len(results)
+            false_percentage = (false_count / total_claims) * 100 if total_claims > 0 else 0
+
+            # OVERALL VERDICT (UPDATED LOGIC)
             st.subheader("Overall Verdict")
-            if avg_severity >= 5 and credibility_score >= 5:
-                st.error("🚨 Overall Verdict: This claim is **HIGHLY MISLEADING** and has been extensively debunked by reliable sources.")
-            elif avg_severity >= 5 and credibility_score < 5:
-                st.warning("⚠️ Overall Verdict: This claim is **POTENTIALLY MISLEADING**, but further comprehensive fact-checking is recommended due to limited source coverage.")
-            elif avg_severity < 5 and credibility_score >= 5:
-                st.success("✅ Overall Verdict: This claim appears **MOSTLY ACCURATE** or of low impact, supported by reliable fact-checking.")
-            else: # avg_severity < 5 and credibility_score < 5
-                st.info("❓ Overall Verdict: This claim has **LOW IMPACT** but also **LIMITED FACT-CHECK COVERAGE**. Exercise caution and seek more information.")
+            if credibility_score < 5:
+                st.info(f"❓ Overall Verdict: Verification is **LIMITED ({credibility_score} sources)**. The overall accuracy is unclear. Exercise caution and seek more information.")
+            elif false_percentage >= 70:
+                st.error(f"🚨 Overall Verdict: This claim is **HIGHLY MISLEADING** ({false_percentage:.0f}% false verdicts) and has been extensively debunked by reliable sources.")
+            elif false_percentage >= 40:
+                st.warning(f"⚠️ Overall Verdict: This claim is **PARTIALLY MISLEADING** ({false_percentage:.0f}% false verdicts). Exercise caution.")
+            else: # false_percentage < 40 and credibility_score >= 5
+                st.success(f"✅ Overall Verdict: This claim appears **MOSTLY ACCURATE** ({false_percentage:.0f}% false verdicts) or of low impact, supported by reliable fact-checking.")
             
             st.subheader("Sentiment & Word Cloud")
             col3, col4 = st.columns([1, 2])
@@ -299,10 +299,10 @@ def main():
             st.rerun()
         st.sidebar.markdown("---")
         if st.sidebar.button("Logout", use_container_width=True):
-            # ✅ 5. DELETE COOKIES ON LOGOUT (corrected method)
+            # Delete cookies
             del cookies['username']
             del cookies['user_email']
-            cookies.save() # Persist the changes
+            cookies.save()
             
             # Clear session state
             st.session_state.authenticated = False
