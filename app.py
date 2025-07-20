@@ -214,15 +214,15 @@ def main():
 
     selected_page = st.session_state.get('page', list(pages.values())[0])
 
-    for label, target in pages.items():
-        if st.sidebar.button(label):
-            selected_page = target
-    
-    if selected_page != st.session_state.get('page'):
-        st.session_state['page'] = selected_page
-        st.experimental_rerun()
-    
-    page = selected_page
+for label, target in pages.items():
+    if st.sidebar.button(label):
+        selected_page = target
+
+if selected_page != st.session_state.get('page'):
+    st.session_state['page'] = selected_page
+    st.experimental_rerun()
+
+    page = st.session_state.get('page', list(pages.values())[0])
 
     if page == "Login": login()
     elif page == "Sign Up": signup()
