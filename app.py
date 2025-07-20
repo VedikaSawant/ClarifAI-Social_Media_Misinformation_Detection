@@ -188,12 +188,32 @@ def feedback_section():
         experience = st.select_slider("Overall experience?", options=[1, 2, 3, 4, 5], value=4)
         submitted = st.form_submit_button("Submit")
         if submitted:
+            if 'user' in st.session_state:
+                users_collection.update_one(
+                    {"email": st.session_state['user']},
+                    {"$push": {"feedback": {
+                        "accuracy": accuracy,
+                        "experience": experience,
+                        "comments": comments
+                    }}}
+                )
             st.success("Thank you for your feedback!")
 
 def main():
     st.set_page_config(page_title="FactCheck App", layout="wide")
-    pages = ["FactCheck", "Feedback"] if st.session_state['authenticated'] else ["Login", "Sign Up"]
-    page = st.sidebar.selectbox("Navigate", pages)
+    st.sidebar.title("📂 Navigation")
+    st.sidebar.markdown("---")
+
+    if st.session_state['authenticated']:
+        st.sidebar.markdown("**Welcome:** " + st.session_state['user'])
+        st.sidebar.markdown("### Pages")
+        pages = {"📰 FactCheck": "FactCheck", "💬 Feedback": "Feedback"}
+    else:
+        st.sidebar.markdown("### Auth")
+        pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
+
+    page_label = st.sidebar.radio("Select Page", list(pages.keys()))
+    page = pages[page_label]
 
     if page == "Login": login()
     elif page == "Sign Up": signup()
