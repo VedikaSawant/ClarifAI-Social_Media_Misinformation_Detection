@@ -1,46 +1,141 @@
-# ClarifAI-Bringing-clarity-through-AI-innovation.
-Misinformation Detection and Fact-Checking on Social Media
+````markdown
+# ClarifAI - Bringing Clarity Through AI Innovation
 
+## Project Overview
 
-Add this file in app and ML_model folders : 
-https://drive.google.com/file/d/1WnzgkFwsQNzm0l29ZshIfJ9PKRCqEzI4/view?usp=sharing
+ClarifAI is an innovative web application developed to combat the pervasive issue of misinformation on social media. It provides users with real-time verification of news headlines and statements by leveraging advanced fact-checking capabilities and sentiment analysis, promoting a more informed digital environment. Born from the Amdocs GenAI Graduate Hackathon 2024, ClarifAI aims to bring clarity through AI innovation.
 
-<h2>Instructions to Run the Project:</h2>
+Misinformation Detection and Fact-Checking on Social Media.
 
-<h3>Clone the Repository:</h3>
-<p>Clone the repository to your local machine using the following command:</p>
-<pre><code>git clone [repository_link]</code></pre>
+## Features
 
-<h3>Navigate to the Project Directory:</h3>
-<pre><code>cd clarifai_streamlit</code></pre>
+* **Real-time Fact-Checking:** Instantly verify news headlines and statements against a comprehensive database of fact-checked claims via the Google Fact-Check API.
+* **Dynamic Verdict System:** Provides a nuanced "Overall Verdict" by synthesizing individual claim verdicts, content severity, and source credibility, offering clear insights (e.g., "Highly Misleading," "Mostly Accurate").
+* **Sentiment Analysis:** Analyzes the sentiment (positive, neutral, negative) of entered statements using TextBlob, adding another layer of context.
+* **Content Severity Scoring:** Implements a keyword-based system to assign severity scores, indicating the potential impact of a claim.
+* **Secure User Authentication:** Features a robust user registration and login system with password hashing (bcrypt) and persistent sessions.
+* **User Feedback System:** Allows users to submit feedback on accuracy and overall experience, enabling continuous improvement and iterative development.
+* **Word Cloud Generation:** Visualizes key terms from fact-checked results for quick insights.
 
-<h3>Install Dependencies:</h3>
-<p>Create and activate a virtual environment (optional but recommended):</p>
-<pre><code>python -m venv venv</code></pre>
-<p>For macOS/Linux:</p>
-<pre><code>source venv/bin/activate</code></pre>
-<p>For Windows:</p>
-<pre><code>venv\Scripts\activate</code></pre>
+## Tech Stack
 
-<p>Install required libraries:</p>
-<pre><code>pip install -r requirements.txt</code></pre>
+ClarifAI is built using a modern and efficient tech stack:
 
-<h3>Set Up Environment Variables:</h3>
-<p>Create a <code>.env</code> file in the project directory and add the following variables:</p>
-<pre><code>MONGO_URI=[your_mongo_uri]
-API_KEY=[your_api_key]</code></pre>
+* **Frontend & Framework:** `Streamlit` (for rapid web application development and interactive UI)
+* **Backend & Logic:** `Python`
+* **Database:** `MongoDB Atlas` (cloud-hosted NoSQL database for user data and feedback storage)
+* **Core API:** `Google Fact-Check API` (for fetching real-time fact-check data)
+* **Authentication:** `bcrypt` (for secure password hashing)
+* **Sentiment Analysis:** `TextBlob` (for natural language processing and sentiment scoring)
+* **Session Management:** `streamlit_cookies_manager` (for persistent user sessions)
+* **Environment Management:** `python-dotenv` (for secure handling of environment variables)
+* **Data Visualization:** `WordCloud` (for generating word cloud images from text)
 
-<h3>Run the Streamlit Application:</h3>
-<p>To start the app, run:</p>
-<pre><code>streamlit run app.py</code></pre>
-<p>Open a web browser and visit http://localhost:[port] to access the app.</p>
+## Instructions to Run the Project:
 
-<h3>Authentication:</h3>
-<ul>
-    <li><strong>Sign Up:</strong> Create a new user account with your username, email, and password.</li>
-    <li><strong>Login:</strong> Use your email and password to log in to the app.</li>
-    <li><strong>Fact-Check:</strong> Enter a news headline or statement in the <strong>"FactCheck News"</strong> section to verify if it's true or fake.</li>
-</ul>
+**Add this file in app and ML_model folders:** `https://drive.google.com/file/d/1WnzgkFwsQNzm0l29ZshIfJ9PKRCqEzI4/view?usp=sharing`
 
-<h3>Feedback:</h3>
-<p>After using the app, you can provide feedback on the results and experience in the <strong>"Feedback"</strong> section.</p>
+### Clone the Repository:
+
+Clone the repository to your local machine using the following command:
+
+```bash
+git clone [repository_link]
+````
+
+### Navigate to the Project Directory:
+
+```bash
+cd clarifai_streamlit
+```
+
+### Install Dependencies:
+
+Create and activate a virtual environment (optional but recommended):
+
+```bash
+python -m venv venv
+```
+
+For macOS/Linux:
+
+```bash
+source venv/bin/activate
+```
+
+For Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+Install required libraries:
+
+```bash
+pip install -r requirements.txt
+```
+
+*(Ensure your `requirements.txt` file contains all the necessary libraries: `streamlit`, `pymongo`, `requests`, `python-dotenv`, `bcrypt`, `streamlit-cookies-manager`, `wordcloud`, `textblob`, `Pillow`)*
+
+### Set Up Environment Variables:
+
+Create a `.env` file in the project directory and add the following variables:
+
+```
+MONGO_URI="your_mongodb_atlas_connection_string"
+API_KEY="your_google_fact_check_api_key"
+```
+
+  * **MONGO\_URI:** Obtain this from your MongoDB Atlas cluster.
+  * **API\_KEY:** Get this from the Google Cloud Console for the Fact-Check API.
+
+### Run the Streamlit Application:
+
+To start the app, run:
+
+```bash
+streamlit run app.py
+```
+
+Open a web browser and visit `http://localhost:[port]` (usually `8501`) to access the app.
+
+## Usage
+
+### Authentication:
+
+  * **Sign Up:** Create a new user account with your username, email, and password.
+  * **Login:** Use your email and password to log in to the app.
+
+### Fact-Check:
+
+  * Enter a news headline or statement in the "FactCheck News" section to verify if it's true or fake.
+
+### Feedback:
+
+  * After using the app, you can provide feedback on the results and experience in the "Feedback" section.
+
+## Demo / Preview
+
+  * [**Live Demo (if deployed, e.g., Streamlit Cloud)**](https://www.google.com/search?q=Your_Streamlit_Cloud_URL_here)
+  * [**GitHub Repository**](https://www.google.com/search?q=Your_Github_Repo_URL_here)
+
+## Contributing
+
+Contributions are welcome\! If you have suggestions or want to improve the project, please feel free to:
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/your-feature-name`).
+3.  Make your changes.
+4.  Commit your changes (`git commit -m 'Add new feature'`).
+5.  Push to the branch (`git push origin feature/your-feature-name`).
+6.  Open a Pull Request.
+
+## Acknowledgements
+
+  * Developed as a semifinalist project in the **Amdocs GenAI Graduate Hackathon 2024**.
+  * Powered by the [Google Fact-Check API](https://www.google.com/search?q=https://developers.google.com/fact-check/api).
+
+<!-- end list -->
+
+```
+```
