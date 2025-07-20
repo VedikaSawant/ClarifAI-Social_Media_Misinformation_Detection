@@ -13,15 +13,16 @@ from streamlit_cookies_manager import CookieManager # ✅ 1. IMPORT THE COOKIE M
 # --- Page Config (must be the first Streamlit command) ---
 st.set_page_config(page_title="FactCheck App", layout="wide")
 
-# ✅ 2. INITIALIZE COOKIE MANAGER
+# ✅ 2. INITIALIZE COOKIE MANAGER AND LOAD COOKIES
 # This should be at the top, after page_config
 cookies = CookieManager()
+cookies.load() # Load the cookies
 
 # --- Initialize session state from cookie ---
 # Do this ONCE, at the very top of the script.
 if 'authenticated' not in st.session_state:
-    # Check if the cookie exists
-    if cookies.get('username'):
+    # Check if the cookie exists ONLY IF cookies are ready
+    if cookies.ready() and cookies.get('username'): # ✅ Check cookies.ready()
         # If cookie exists, set session state from cookie
         st.session_state['authenticated'] = True
         st.session_state['username'] = cookies.get('username')
@@ -33,7 +34,6 @@ if 'authenticated' not in st.session_state:
         st.session_state['page'] = 'Login'
         st.session_state['username'] = ''
         st.session_state['user'] = ''
-
 
 # --- Load env and MongoDB connection ---
 load_dotenv()
