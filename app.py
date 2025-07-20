@@ -9,15 +9,23 @@ import io
 from PIL import Image
 from textblob import TextBlob
 
+# --- Page Config (must be the first Streamlit command) ---
+st.set_page_config(page_title="FactCheck App", layout="wide")
+
 # --- Initialize session state ---
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'Login' # Default page is Login
 
 # --- Load env and MongoDB connection ---
 load_dotenv()
-MONGO_URI = st.secrets["MONGO_URI"]
+# Use st.secrets for deployment, fallback to os.getenv for local dev
+MONGO_URI = st.secrets.get("MONGO_URI", os.getenv("MONGO_URI"))
+API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
+
 client = pymongo.MongoClient(MONGO_URI)
-db = client.get_database()
+db = client.get_database("factcheck_db") # It's better to explicitly name your DB
 users_collection = db.get_collection("user_data")
 
 # --- Auth helpers ---
@@ -34,16 +42,19 @@ def login():
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Login")
 
-        if submitted and email and password:
-            user = users_collection.find_one({"email": email})
-            if user and verify_password(user["password"], password):
-                st.session_state.update({'authenticated': True, 'user': email, 'page': "FactCheck"})
-                st.success("Successfully logged in!")
-                st.rerun()
+        if submitted:
+            if email and password:
+                user = users_collection.find_one({"email": email})
+                if user and verify_password(user["password"], password):
+                    st.session_state.authenticated = True
+                    st.session_state.user = email
+                    st.session_state.page = "FactCheck"
+                    st.success("Successfully logged in!")
+                    st.rerun() # Rerun to show the main app
+                else:
+                    st.error("Invalid email or password")
             else:
-                st.error("Invalid email or password")
-        elif submitted:
-            st.error("Please fill in all fields.")
+                st.error("Please fill in all fields.")
 
 def signup():
     st.title("Create New Account")
@@ -53,27 +64,34 @@ def signup():
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign Up")
 
-        if submitted and username and email and password:
-            if users_collection.find_one({"email": email}):
-                st.error("Email is already in use")
+        if submitted:
+            if username and email and password:
+                if users_collection.find_one({"email": email}):
+                    st.error("Email is already in use")
+                else:
+                    users_collection.insert_one({
+                        "username": username,
+                        "email": email,
+                        "password": hash_password(password),
+                        "feedback": [] # Initialize feedback array
+                    })
+                    st.session_state.authenticated = True
+                    st.session_state.user = email
+                    st.session_state.page = "FactCheck"
+                    st.success("Account created! Logging in...")
+                    st.rerun() # Rerun to show the main app
             else:
-                users_collection.insert_one({"username": username, "email": email, "password": hash_password(password)})
-                st.session_state.update({'authenticated': True, 'user': email, 'page': "FactCheck"})
-                st.success("Account created! Logging in...")
-                st.rerun()
-        elif submitted:
-            st.error("Please fill in all fields.")
+                st.error("Please fill in all fields.")
 
 # --- FactCheck API Setup ---
-API_KEY = st.secrets["API_KEY"]
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 
 # --- Verdict classification ---
 def classify_verdict(verdict_text):
     verdict_text = verdict_text.lower()
-    if any(x in verdict_text for x in ["false", "misleading", "incorrect"]):
+    if any(x in verdict_text for x in ["false", "misleading", "incorrect", "untrue", "fake"]):
         return "❌ False"
-    elif any(x in verdict_text for x in ["true", "accurate", "correct"]):
+    elif any(x in verdict_text for x in ["true", "accurate", "correct", "mostly true"]):
         return "✅ True"
     else:
         return "⚠️ Unclear"
@@ -82,46 +100,48 @@ def classify_verdict(verdict_text):
 def assign_severity(claim):
     claim = claim.lower()
     keywords = {
-        10: ["vaccine", "covid-19", "health"],
-        9: ["explosion", "hazard"],
-        8: ["climate change", "pollution"],
-        7: ["election", "fraud", "corruption"],
-        6: ["technology", "robot", "science"],
-        5: ["celebrity", "sports"],
-        4: []  # fallback
+        10: ["vaccine", "covid-19", "health", "medical"],
+        9: ["explosion", "hazard", "attack", "war"],
+        8: ["climate change", "pollution", "disaster"],
+        7: ["election", "fraud", "corruption", "government"],
+        6: ["technology", "robot", "science", "AI"],
+        5: ["celebrity", "sports", "entertainment"],
     }
     for score, words in keywords.items():
         if any(word in claim for word in words):
             return score
-    return 4
+    return 4 # Fallback score
 
 # --- Core logic ---
 def check_fake_news(query):
     response = requests.get(URL, params={"query": query, "key": API_KEY})
     if response.status_code != 200:
-        st.error(f"❌ API Error {response.status_code}")
+        st.error(f"❌ API Error {response.status_code}: {response.text}")
         return []
 
     data = response.json()
-    if "claims" not in data:
+    if "claims" not in data or not data["claims"]:
         return []
 
     results = []
     for claim in data["claims"]:
-        for review in claim.get("claimReview", []):
-            results.append({
-                "claim": claim['text'],
-                "fact_checker": review['publisher']['name'],
-                "verdict": review['textualRating'],
-                "verdict_label": classify_verdict(review['textualRating']),
-                "url": review['url'],
-                "severity_score": assign_severity(claim['text'])
-            })
+        if "claimReview" in claim:
+            for review in claim["claimReview"]:
+                results.append({
+                    "claim": claim.get('text', 'N/A'),
+                    "fact_checker": review.get('publisher', {}).get('name', 'N/A'),
+                    "verdict": review.get('textualRating', 'N/A'),
+                    "verdict_label": classify_verdict(review.get('textualRating', '')),
+                    "url": review.get('url', '#'),
+                    "severity_score": assign_severity(claim.get('text', ''))
+                })
     return results
 
 # --- Visualization tools ---
 def generate_word_cloud(claims):
     text = " ".join([f"{c['claim']} {c['verdict']}" for c in claims])
+    if not text.strip():
+        return None
     wordcloud = WordCloud(width=800, height=400, background_color="white").generate(text)
     img = io.BytesIO()
     wordcloud.to_image().save(img, format='PNG')
@@ -130,63 +150,83 @@ def generate_word_cloud(claims):
 
 def analyze_sentiment(text):
     score = TextBlob(text).sentiment.polarity
-    return {
-        "positive": 80 if score > 0.1 else 10 if score < -0.1 else 20,
-        "neutral": 10 if score > 0.1 else 20 if score < -0.1 else 60,
-        "negative": 10 if score > 0.1 else 70 if score < -0.1 else 20
-    }
+    if score > 0.1:
+        return {"positive": 80, "neutral": 10, "negative": 10}
+    elif score < -0.1:
+        return {"positive": 10, "neutral": 20, "negative": 70}
+    else:
+        return {"positive": 20, "neutral": 60, "negative": 20}
 
 def calculate_average_severity(results):
-    return sum(r['severity_score'] for r in results) / len(results) if results else 0
+    if not results:
+        return 0
+    return sum(r['severity_score'] for r in results) / len(results)
 
 # --- UI Logic ---
 def factcheck_input():
-    st.title("FactCheck News")
+    st.title("FactCheck News 📰")
     with st.form("factcheck_form"):
         text_input = st.text_area("Enter a news headline or statement", placeholder="e.g. The Earth is flat")
         submitted = st.form_submit_button("Check Fact")
 
         if submitted and text_input.strip():
-            results = check_fake_news(text_input)
+            with st.spinner("Analyzing claim..."):
+                results = check_fake_news(text_input)
+
             if not results:
-                st.error("No results found for the claim.")
+                st.error("No fact-check results found for this claim.")
                 return
 
-            st.subheader("Prediction Result")
-            avg_severity = calculate_average_severity(results)
+            st.subheader("Prediction Results")
+            for r in sorted(results, key=lambda x: x['severity_score'], reverse=True):
+                with st.container(border=True):
+                    st.markdown(f"**Claim:** {r['claim']}")
+                    st.markdown(f"**Fact-Checker:** {r['fact_checker']}")
+                    st.markdown(f"**Verdict:** {r['verdict_label']} ({r['verdict']})")
+                    st.markdown(f"**Severity Score:** `{r['severity_score']}/10`")
+                    st.markdown(f"**Source:** [{r['url']}]({r['url']})")
 
-            for r in results:
-                st.markdown(f"**Claim:** {r['claim']}")
-                st.markdown(f"**Fact-Checker:** {r['fact_checker']}")
-                st.markdown(f"**Verdict:** {r['verdict_label']} ({r['verdict']})")
-                st.markdown(f"**Severity Score:** {r['severity_score']}/10")
-                st.markdown(f"**URL:** {r['url']}")
+            st.markdown("---")
+            col1, col2 = st.columns(2)
 
-            st.subheader("Word Cloud")
-            st.image(generate_word_cloud(results), use_container_width=True)
+            with col1:
+                st.subheader("Content Severity Rating")
+                avg_severity = calculate_average_severity(results)
+                st.progress(avg_severity / 10)
+                st.markdown(f"**Average Score: {avg_severity:.1f} / 10**")
+                st.info('MISLEADING' if avg_severity >= 5 else 'LOW IMPACT')
 
-            st.subheader("Content Severity Rating")
-            st.progress(avg_severity / 10)
-            st.text(f"{avg_severity:.1f}: {'MISLEADING' if avg_severity >= 5 else 'LOW IMPACT'}")
+            with col2:
+                st.subheader("Source Credibility")
+                credibility_score = len(results)
+                st.progress(min(credibility_score / 10, 1.0))
+                st.markdown(f"**Found {credibility_score} fact-check reviews.**")
+                st.info("Reliable" if credibility_score >= 5 else "Partially Reliable")
 
-            credibility_score = len(results)
-            st.subheader("Source Credibility Score")
-            st.progress(min(credibility_score / 10, 1.0))
-            st.text("Reliable" if credibility_score >= 5 else "Partially Reliable")
+            st.subheader("Sentiment & Word Cloud")
+            col3, col4 = st.columns([1, 2])
+            with col3:
+                sentiment = analyze_sentiment(text_input)
+                st.markdown("**Sentiment Distribution**")
+                st.text(f"Positive: {sentiment['positive']}%\nNeutral:  {sentiment['neutral']}%\nNegative: {sentiment['negative']}%")
+            with col4:
+                st.markdown("**Key Terms**")
+                wordcloud_img = generate_word_cloud(results)
+                if wordcloud_img:
+                    st.image(wordcloud_img, use_container_width=True)
 
-            sentiment = analyze_sentiment(text_input)
-            st.subheader("Sentiment Distribution")
-            st.text(f"Positive: {sentiment['positive']}%\nNeutral: {sentiment['neutral']}%\nNegative: {sentiment['negative']}%")
         elif submitted:
             st.error("Please enter a valid input.")
 
 def feedback_section():
-    st.title("Feedback")
+    st.title("Feedback 💬")
+    st.write("Help us improve! Let us know what you think.")
     with st.form("feedback_form"):
-        accuracy = st.select_slider("Accuracy of results?", options=[1, 2, 3, 4, 5], value=3)
-        comments = st.text_area("Any comments?")
-        experience = st.select_slider("Overall experience?", options=[1, 2, 3, 4, 5], value=4)
-        submitted = st.form_submit_button("Submit")
+        accuracy = st.select_slider("How accurate were the results?", options=[1, 2, 3, 4, 5], value=3)
+        experience = st.select_slider("Rate your overall experience:", options=[1, 2, 3, 4, 5], value=4)
+        comments = st.text_area("Any comments or suggestions?")
+        submitted = st.form_submit_button("Submit Feedback")
+
         if submitted:
             if 'user' in st.session_state:
                 users_collection.update_one(
@@ -197,37 +237,39 @@ def feedback_section():
                         "comments": comments
                     }}}
                 )
-            st.success("Thank you for your feedback!")
+                st.success("Thank you for your feedback! ✅")
+            else:
+                st.error("You must be logged in to submit feedback.")
 
 def main():
-    st.set_page_config(page_title="FactCheck App", layout="wide")
     st.sidebar.title("📂 Navigation")
-    st.sidebar.markdown("---")
 
-    pages = {}
-    rerun_trigger = False  # ✅ Flag to safely control rerun
+    # --- Conditional UI based on authentication status ---
+    if st.session_state.authenticated:
+        st.sidebar.markdown(f"**Welcome:** `{st.session_state.get('user', '')}`")
+        if st.sidebar.button("📰 FactCheck", use_container_width=True):
+            st.session_state.page = "FactCheck"
+            st.rerun()
+        if st.sidebar.button("💬 Feedback", use_container_width=True):
+            st.session_state.page = "Feedback"
+            st.rerun()
+        st.sidebar.markdown("---")
+        if st.sidebar.button("Logout", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.page = "Login"
+            st.session_state.pop('user', None) # Remove user from state
+            st.rerun()
 
-    if st.session_state['authenticated']:
-        st.sidebar.markdown("**Welcome:** " + st.session_state['user'])
-        st.sidebar.markdown("### Pages")
-        pages = {"📰 FactCheck": "FactCheck", "💬 Feedback": "Feedback"}
-    else:
-        st.sidebar.markdown("### Auth")
-        pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
+    else: # Not authenticated
+        if st.sidebar.button("🔐 Login", use_container_width=True):
+            st.session_state.page = "Login"
+            st.rerun()
+        if st.sidebar.button("📝 Sign Up", use_container_width=True):
+            st.session_state.page = "Sign Up"
+            st.rerun()
 
-    current_page = st.session_state.get("page", list(pages.values())[0])
-
-    for label, target in pages.items():
-        if st.sidebar.button(label):
-            if target != current_page:
-                st.session_state["page"] = target
-                rerun_trigger = True  # ✅ Delay rerun until safe point
-
-    if rerun_trigger:
-        st.experimental_rerun()
-
-    page = st.session_state.get("page", list(pages.values())[0])
-
+    # --- Page Router ---
+    page = st.session_state.page
     if page == "Login":
         login()
     elif page == "Sign Up":
