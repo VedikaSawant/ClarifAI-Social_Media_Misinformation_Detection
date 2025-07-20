@@ -16,7 +16,6 @@ st.set_page_config(page_title="FactCheck App", layout="wide")
 # ✅ 2. INITIALIZE COOKIE MANAGER AND LOAD COOKIES
 # This should be at the top, after page_config
 cookies = CookieManager()
-cookies.load() # Load the cookies
 
 # --- Initialize session state from cookie ---
 # Do this ONCE, at the very top of the script.
