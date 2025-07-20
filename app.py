@@ -212,12 +212,17 @@ def main():
         st.sidebar.markdown("### Auth")
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
 
-    for label, target_page in pages.items():
-        if st.sidebar.button(label):
-            st.session_state['page'] = target_page
-            st.experimental_rerun()
+    selected_page = st.session_state.get('page', list(pages.values())[0])
 
-    page = st.session_state.get('page', list(pages.values())[0])
+    for label, target in pages.items():
+        if st.sidebar.button(label):
+            selected_page = target
+    
+    if selected_page != st.session_state.get('page'):
+        st.session_state['page'] = selected_page
+        st.experimental_rerun()
+    
+    page = selected_page
 
     if page == "Login": login()
     elif page == "Sign Up": signup()
