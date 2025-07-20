@@ -205,6 +205,8 @@ def main():
     st.sidebar.markdown("---")
 
     pages = {}
+    rerun_trigger = False  # ✅ Flag to safely control rerun
+
     if st.session_state['authenticated']:
         st.sidebar.markdown("**Welcome:** " + st.session_state['user'])
         st.sidebar.markdown("### Pages")
@@ -212,25 +214,28 @@ def main():
     else:
         st.sidebar.markdown("### Auth")
         pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
-        pages = {"🔐 Login": "Login", "📝 Sign Up": "Sign Up"}
 
-    
-    selected_page = st.session_state.get('page', list(pages.values())[0])
+    current_page = st.session_state.get("page", list(pages.values())[0])
 
     for label, target in pages.items():
         if st.sidebar.button(label):
-            selected_page = target
+            if target != current_page:
+                st.session_state["page"] = target
+                rerun_trigger = True  # ✅ Delay rerun until safe point
 
-    if selected_page != st.session_state.get('page'):
-        st.session_state['page'] = selected_page
+    if rerun_trigger:
         st.experimental_rerun()
 
-    page = st.session_state.get('page', list(pages.values())[0])
+    page = st.session_state.get("page", list(pages.values())[0])
 
-    if page == "Login": login()
-    elif page == "Sign Up": signup()
-    elif page == "FactCheck": factcheck_input()
-    elif page == "Feedback": feedback_section()
+    if page == "Login":
+        login()
+    elif page == "Sign Up":
+        signup()
+    elif page == "FactCheck":
+        factcheck_input()
+    elif page == "Feedback":
+        feedback_section()
 
 if __name__ == "__main__":
     main()
