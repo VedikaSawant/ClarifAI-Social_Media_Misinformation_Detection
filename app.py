@@ -234,6 +234,17 @@ def factcheck_input():
                 st.markdown(f"**Found {credibility_score} fact-check reviews.**")
                 st.info("Reliable" if credibility_score >= 5 else "Partially Reliable")
 
+            # OVERALL VERDICT
+            st.subheader("Overall Verdict")
+            if avg_severity >= 5 and credibility_score >= 5:
+                st.error("🚨 Overall Verdict: This claim is **HIGHLY MISLEADING** and has been extensively debunked by reliable sources.")
+            elif avg_severity >= 5 and credibility_score < 5:
+                st.warning("⚠️ Overall Verdict: This claim is **POTENTIALLY MISLEADING**, but further comprehensive fact-checking is recommended due to limited source coverage.")
+            elif avg_severity < 5 and credibility_score >= 5:
+                st.success("✅ Overall Verdict: This claim appears **MOSTLY ACCURATE** or of low impact, supported by reliable fact-checking.")
+            else: # avg_severity < 5 and credibility_score < 5
+                st.info("❓ Overall Verdict: This claim has **LOW IMPACT** but also **LIMITED FACT-CHECK COVERAGE**. Exercise caution and seek more information.")
+            
             st.subheader("Sentiment & Word Cloud")
             col3, col4 = st.columns([1, 2])
             with col3:
