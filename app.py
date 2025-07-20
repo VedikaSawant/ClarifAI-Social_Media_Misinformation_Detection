@@ -8,24 +8,40 @@ from wordcloud import WordCloud
 import io
 from PIL import Image
 from textblob import TextBlob
+from streamlit_cookies_manager import CookieManager # ✅ 1. IMPORT THE COOKIE MANAGER
 
 # --- Page Config (must be the first Streamlit command) ---
 st.set_page_config(page_title="FactCheck App", layout="wide")
 
-# --- Initialize session state ---
+# ✅ 2. INITIALIZE COOKIE MANAGER
+# This should be at the top, after page_config
+cookies = CookieManager()
+
+# --- Initialize session state from cookie ---
+# Do this ONCE, at the very top of the script.
 if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'Login' # Default page is Login
+    # Check if the cookie exists
+    if cookies.get('username'):
+        # If cookie exists, set session state from cookie
+        st.session_state['authenticated'] = True
+        st.session_state['username'] = cookies.get('username')
+        st.session_state['user'] = cookies.get('user_email')
+        st.session_state['page'] = 'FactCheck'
+    else:
+        # If no cookie, initialize session state as new
+        st.session_state['authenticated'] = False
+        st.session_state['page'] = 'Login'
+        st.session_state['username'] = ''
+        st.session_state['user'] = ''
+
 
 # --- Load env and MongoDB connection ---
 load_dotenv()
-# Use st.secrets for deployment, fallback to os.getenv for local dev
 MONGO_URI = st.secrets.get("MONGO_URI", os.getenv("MONGO_URI"))
 API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
 
 client = pymongo.MongoClient(MONGO_URI)
-db = client.get_database("factcheck_db") # It's better to explicitly name your DB
+db = client.get_database("factcheck_db")
 users_collection = db.get_collection("user_data")
 
 # --- Auth helpers ---
@@ -46,11 +62,18 @@ def login():
             if email and password:
                 user = users_collection.find_one({"email": email})
                 if user and verify_password(user["password"], password):
+                    # Set session state
                     st.session_state.authenticated = True
                     st.session_state.user = email
+                    st.session_state.username = user.get('username', email)
                     st.session_state.page = "FactCheck"
+
+                    # ✅ 3. SET COOKIES ON LOGIN
+                    cookies.set('username', st.session_state.username)
+                    cookies.set('user_email', st.session_state.user)
+
                     st.success("Successfully logged in!")
-                    st.rerun() # Rerun to show the main app
+                    st.rerun()
                 else:
                     st.error("Invalid email or password")
             else:
@@ -73,16 +96,24 @@ def signup():
                         "username": username,
                         "email": email,
                         "password": hash_password(password),
-                        "feedback": [] # Initialize feedback array
+                        "feedback": []
                     })
+                    # Set session state
                     st.session_state.authenticated = True
                     st.session_state.user = email
+                    st.session_state.username = username
                     st.session_state.page = "FactCheck"
+
+                    # ✅ 4. SET COOKIES ON SIGNUP
+                    cookies.set('username', st.session_state.username)
+                    cookies.set('user_email', st.session_state.user)
+
                     st.success("Account created! Logging in...")
-                    st.rerun() # Rerun to show the main app
+                    st.rerun()
             else:
                 st.error("Please fill in all fields.")
 
+# --- (The rest of your functions: check_fake_news, visualizations, etc. remain unchanged) ---
 # --- FactCheck API Setup ---
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 
@@ -228,7 +259,7 @@ def feedback_section():
         submitted = st.form_submit_button("Submit Feedback")
 
         if submitted:
-            if 'user' in st.session_state:
+            if 'user' in st.session_state and st.session_state['user']:
                 users_collection.update_one(
                     {"email": st.session_state['user']},
                     {"$push": {"feedback": {
@@ -241,12 +272,12 @@ def feedback_section():
             else:
                 st.error("You must be logged in to submit feedback.")
 
+# Main app logic
 def main():
     st.sidebar.title("📂 Navigation")
 
-    # --- Conditional UI based on authentication status ---
     if st.session_state.authenticated:
-        st.sidebar.markdown(f"**Welcome:** `{st.session_state.get('user', '')}`")
+        st.sidebar.markdown(f"**Welcome, {st.session_state.get('username', '')}!**")
         if st.sidebar.button("📰 FactCheck", use_container_width=True):
             st.session_state.page = "FactCheck"
             st.rerun()
@@ -255,9 +286,15 @@ def main():
             st.rerun()
         st.sidebar.markdown("---")
         if st.sidebar.button("Logout", use_container_width=True):
+            # ✅ 5. DELETE COOKIES ON LOGOUT
+            cookies.delete('username')
+            cookies.delete('user_email')
+            
+            # Clear session state
             st.session_state.authenticated = False
             st.session_state.page = "Login"
-            st.session_state.pop('user', None) # Remove user from state
+            st.session_state.username = ''
+            st.session_state.user = ''
             st.rerun()
 
     else: # Not authenticated
@@ -269,14 +306,13 @@ def main():
             st.rerun()
 
     # --- Page Router ---
-    page = st.session_state.page
-    if page == "Login":
+    if st.session_state.page == "Login":
         login()
-    elif page == "Sign Up":
+    elif st.session_state.page == "Sign Up":
         signup()
-    elif page == "FactCheck":
+    elif st.session_state.page == "FactCheck":
         factcheck_input()
-    elif page == "Feedback":
+    elif st.session_state.page == "Feedback":
         feedback_section()
 
 if __name__ == "__main__":
