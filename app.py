@@ -274,7 +274,7 @@ def feedback_section():
 
 # Main app logic
 def main():
-    st.sidebar.title("📂 Navigation")
+    st.sidebar.title("Page Selection")
 
     if st.session_state.authenticated:
         st.sidebar.markdown(f"**Welcome, {st.session_state.get('username', '')}!**")
