@@ -101,6 +101,7 @@ API_KEY="your_google_fact_check_api_key"
      
      *Important: Replace the <password> placeholder in the copied URI with the actual password for the database user you created during setup.*
 
+
   * **Obtaining API\_KEY🗝️ (Google Fact-Check API):**
      This requires a Google Cloud project with the necessary API enabled.
      
@@ -118,6 +119,7 @@ API_KEY="your_google_fact_check_api_key"
      3. Copy the generated API Key.
      
      *Best Practice: Edit the key to add an API restriction, selecting only the Fact Check API to ensure security.*
+
 
 ### Run the Streamlit Application:
 
