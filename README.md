@@ -80,7 +80,7 @@ MONGO_URI="your_mongodb_atlas_connection_string"
 API_KEY="your_google_fact_check_api_key"
 ```
 
-  * **Obtaining MONGO\_URI:** 
+  * **Obtaining MONGO\_URI:** *
      To get this, you must first have a MongoDB Atlas account and a deployed cluster.
    
      **Prerequisites:**
@@ -101,7 +101,7 @@ API_KEY="your_google_fact_check_api_key"
      
      *Important: Replace the <password> placeholder in the copied URI with the actual password for the database user you created during setup.*
 
-  * **API\_KEY🗝️:**🗝️
+  * **Obtaining API\_KEY🗝️ (Google Fact-Check API):***
   This requires a Google Cloud project with the necessary API enabled.
   
   **Prerequisites:**
