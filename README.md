@@ -129,7 +129,7 @@ To start the app, run:
 streamlit run app.py
 ```
 
-Open a web browser and visit `http://localhost:[port]` (usually `8501`) to access the app.🚀
+Open a web browser and visit `http://localhost:[port]` (usually `8501`) given in the output to access the app.🚀
 
 ## Usage
 
